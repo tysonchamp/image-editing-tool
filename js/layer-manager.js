@@ -20,6 +20,17 @@ export class LayerManager {
                 this.setLayerScale(scale);
             });
         }
+
+        // Bind Opacity Input
+        const opacityInput = document.getElementById('layer-opacity');
+        const opacityVal = document.getElementById('layer-opacity-val');
+        if (opacityInput) {
+            opacityInput.addEventListener('input', (e) => {
+                const opacity = parseInt(e.target.value) / 100;
+                opacityVal.textContent = `${e.target.value}%`;
+                this.setLayerOpacity(opacity);
+            });
+        }
     }
 
     init() {
@@ -61,7 +72,8 @@ export class LayerManager {
             visible: true,
             x: x,
             y: y,
-            scale: 1.0
+            scale: 1.0,
+            opacity: 1.0
         };
 
         this.layers.unshift(layer);
@@ -97,6 +109,13 @@ export class LayerManager {
                 scaleInput.value = layer.scale * 100;
                 scaleVal.textContent = `${Math.round(layer.scale * 100)}%`;
             }
+
+            const opacityInput = document.getElementById('layer-opacity');
+            const opacityVal = document.getElementById('layer-opacity-val');
+            if (opacityInput) {
+                opacityInput.value = layer.opacity * 100;
+                opacityVal.textContent = `${Math.round(layer.opacity * 100)}%`;
+            }
         }
     }
 
@@ -104,6 +123,14 @@ export class LayerManager {
         const layer = this.getActiveLayer();
         if (layer) {
             layer.scale = scale;
+            this.canvasManager.render(this.layers);
+        }
+    }
+
+    setLayerOpacity(opacity) {
+        const layer = this.getActiveLayer();
+        if (layer) {
+            layer.opacity = opacity;
             this.canvasManager.render(this.layers);
         }
     }

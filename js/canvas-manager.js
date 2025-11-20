@@ -111,6 +111,7 @@ export class CanvasManager {
             const layer = layers[i];
             if (layer.visible) {
                 this.ctx.save();
+                this.ctx.globalAlpha = layer.opacity !== undefined ? layer.opacity : 1.0;
                 this.ctx.translate(layer.x, layer.y);
                 this.ctx.scale(layer.scale, layer.scale);
                 this.ctx.drawImage(layer.canvas, 0, 0);
