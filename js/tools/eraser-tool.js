@@ -6,14 +6,26 @@ export class EraserTool {
         this.lastX = 0;
         this.lastY = 0;
         this.size = 20;
+        this.smoothness = 0;
 
         this.cursor = document.getElementById('brush-cursor');
+
+        // Bind smoothness input (shared)
+        const smoothnessInput = document.getElementById('brush-smoothness');
+        if (smoothnessInput) {
+            smoothnessInput.addEventListener('input', (e) => {
+                this.smoothness = parseInt(e.target.value) / 100;
+            });
+        }
     }
 
     activate() {
         this.canvasManager.canvas.style.cursor = 'none';
         const sizeInput = document.getElementById('brush-size');
         if (sizeInput) this.size = parseInt(sizeInput.value);
+
+        const smoothnessInput = document.getElementById('brush-smoothness');
+        if (smoothnessInput) this.smoothness = parseInt(smoothnessInput.value) / 100;
 
         if (this.cursor) {
             this.cursor.style.display = 'block';
@@ -64,9 +76,8 @@ export class EraserTool {
         if (this.cursor && event) {
             this.cursor.style.left = `${event.clientX}px`;
             this.cursor.style.top = `${event.clientY}px`;
-            this.cursor.style.display = 'block'; // Ensure visible
+            this.cursor.style.display = 'block';
 
-            // Update size if changed via input (Eraser shares brush size input)
             const sizeInput = document.getElementById('brush-size');
             if (sizeInput) {
                 this.size = parseInt(sizeInput.value);
@@ -81,7 +92,15 @@ export class EraserTool {
 
         layer.ctx.lineWidth = this.size / layer.scale;
 
-        const tCoords = this.getTransformedCoords(coords, layer);
+        let tCoords = this.getTransformedCoords(coords, layer);
+
+        // Smoothing Logic
+        if (this.smoothness > 0) {
+            const factor = 1 - this.smoothness;
+            const nextX = this.lastX + (tCoords.x - this.lastX) * factor;
+            const nextY = this.lastY + (tCoords.y - this.lastY) * factor;
+            tCoords = { x: nextX, y: nextY };
+        }
 
         layer.ctx.lineTo(tCoords.x, tCoords.y);
         layer.ctx.stroke();

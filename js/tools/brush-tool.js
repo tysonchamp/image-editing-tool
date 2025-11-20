@@ -10,6 +10,7 @@ export class BrushTool {
         this.size = 10;
         this.color = '#000000';
         this.opacity = 1;
+        this.smoothness = 0; // 0 to 0.9
 
         this.cursor = document.getElementById('brush-cursor');
 
@@ -23,6 +24,8 @@ export class BrushTool {
         const colorInput = document.getElementById('brush-color');
         const opacityInput = document.getElementById('brush-opacity');
         const opacityVal = document.getElementById('brush-opacity-val');
+        const smoothnessInput = document.getElementById('brush-smoothness');
+        const smoothnessVal = document.getElementById('brush-smoothness-val');
 
         if (sizeInput) {
             sizeInput.addEventListener('input', (e) => {
@@ -44,10 +47,17 @@ export class BrushTool {
                 opacityVal.textContent = `${e.target.value}%`;
             });
         }
+
+        if (smoothnessInput) {
+            smoothnessInput.addEventListener('input', (e) => {
+                this.smoothness = parseInt(e.target.value) / 100;
+                smoothnessVal.textContent = `${e.target.value}%`;
+            });
+        }
     }
 
     activate() {
-        this.canvasManager.canvas.style.cursor = 'none'; // Hide default cursor
+        this.canvasManager.canvas.style.cursor = 'none';
         if (this.cursor) {
             this.cursor.style.display = 'block';
             this.updateCursorSize();
@@ -61,12 +71,8 @@ export class BrushTool {
 
     updateCursorSize() {
         if (this.cursor) {
-            // Scale cursor visual based on canvas zoom?
-            // The brush size is in canvas pixels.
-            // If canvas is zoomed in (scale > 1), the brush circle should look bigger on screen.
             const zoom = this.canvasManager.scale;
             const displaySize = this.size * zoom;
-
             this.cursor.style.width = `${displaySize}px`;
             this.cursor.style.height = `${displaySize}px`;
         }
@@ -99,12 +105,11 @@ export class BrushTool {
     }
 
     mousemove(coords, event) {
-        // Update cursor position
         if (this.cursor && event) {
             this.cursor.style.left = `${event.clientX}px`;
             this.cursor.style.top = `${event.clientY}px`;
             this.cursor.style.display = 'block';
-            this.updateCursorSize(); // Update size in case zoom changed (though zoom usually requires wheel)
+            this.updateCursorSize();
         }
 
         if (!this.isDrawing) return;
@@ -112,7 +117,22 @@ export class BrushTool {
         const layer = this.layerManager.getActiveLayer();
         if (!layer) return;
 
-        const tCoords = this.getTransformedCoords(coords, layer);
+        let tCoords = this.getTransformedCoords(coords, layer);
+
+        // Smoothing Logic
+        if (this.smoothness > 0) {
+            // Simple Low Pass Filter
+            // current = last + (target - last) * (1 - smoothness)
+            // But we want to draw from last to current.
+            // Actually, we update lastX/Y slowly towards tCoords.
+
+            // Wait, if we do that, we lag behind the cursor. That's how smoothing works.
+            const factor = 1 - this.smoothness;
+            const nextX = this.lastX + (tCoords.x - this.lastX) * factor;
+            const nextY = this.lastY + (tCoords.y - this.lastY) * factor;
+
+            tCoords = { x: nextX, y: nextY };
+        }
 
         layer.ctx.lineTo(tCoords.x, tCoords.y);
         layer.ctx.stroke();
@@ -133,14 +153,6 @@ export class BrushTool {
 
     mouseleave(coords) {
         this.mouseup(coords);
-        // Hide cursor when leaving canvas? 
-        // ToolManager handles mouseleave from canvas.
-        // But if we are just moving out, we might want to hide the custom cursor.
         if (this.cursor) this.cursor.style.display = 'none';
     }
-
-    // We need a way to show cursor again when entering.
-    // ToolManager doesn't have mouseenter. 
-    // But mousemove will trigger.
-    // Let's add a check in mousemove to ensure it's visible.
 }
