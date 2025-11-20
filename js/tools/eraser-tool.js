@@ -10,11 +10,11 @@ export class EraserTool {
 
         this.cursor = document.getElementById('brush-cursor');
 
-        // Bind smoothness input (shared)
         const smoothnessInput = document.getElementById('brush-smoothness');
         if (smoothnessInput) {
             smoothnessInput.addEventListener('input', (e) => {
                 this.smoothness = parseInt(e.target.value) / 100;
+                this.updateCursorSize();
             });
         }
     }
@@ -44,6 +44,9 @@ export class EraserTool {
             const displaySize = this.size * zoom;
             this.cursor.style.width = `${displaySize}px`;
             this.cursor.style.height = `${displaySize}px`;
+
+            const blur = (this.smoothness * this.size * zoom) / 2;
+            this.cursor.style.boxShadow = `0 0 ${blur}px rgba(255,255,255,0.8), inset 0 0 ${blur}px rgba(0,0,0,0.5)`;
         }
     }
 
@@ -70,6 +73,18 @@ export class EraserTool {
         layer.ctx.lineWidth = this.size / layer.scale;
         layer.ctx.globalCompositeOperation = 'destination-out';
         layer.ctx.globalAlpha = 1;
+
+        if (this.smoothness > 0) {
+            layer.ctx.shadowBlur = (this.smoothness * this.size) / layer.scale;
+            // For eraser (destination-out), shadowColor must be opaque to erase?
+            // Actually, destination-out removes pixels.
+            // If we draw a shadow, the shadow also removes pixels.
+            // So shadowColor should be 'black' (or any color).
+            layer.ctx.shadowColor = 'black';
+        } else {
+            layer.ctx.shadowBlur = 0;
+            layer.ctx.shadowColor = 'transparent';
+        }
     }
 
     mousemove(coords, event) {
@@ -92,15 +107,7 @@ export class EraserTool {
 
         layer.ctx.lineWidth = this.size / layer.scale;
 
-        let tCoords = this.getTransformedCoords(coords, layer);
-
-        // Smoothing Logic
-        if (this.smoothness > 0) {
-            const factor = 1 - this.smoothness;
-            const nextX = this.lastX + (tCoords.x - this.lastX) * factor;
-            const nextY = this.lastY + (tCoords.y - this.lastY) * factor;
-            tCoords = { x: nextX, y: nextY };
-        }
+        const tCoords = this.getTransformedCoords(coords, layer);
 
         layer.ctx.lineTo(tCoords.x, tCoords.y);
         layer.ctx.stroke();
@@ -118,6 +125,8 @@ export class EraserTool {
             if (layer) {
                 layer.ctx.closePath();
                 layer.ctx.globalCompositeOperation = 'source-over';
+                layer.ctx.shadowBlur = 0;
+                layer.ctx.shadowColor = 'transparent';
             }
         }
     }

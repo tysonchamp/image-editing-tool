@@ -10,7 +10,7 @@ export class BrushTool {
         this.size = 10;
         this.color = '#000000';
         this.opacity = 1;
-        this.smoothness = 0; // 0 to 0.9
+        this.smoothness = 0; // Repurposed for Edge Softness (Blur)
 
         this.cursor = document.getElementById('brush-cursor');
 
@@ -50,8 +50,9 @@ export class BrushTool {
 
         if (smoothnessInput) {
             smoothnessInput.addEventListener('input', (e) => {
-                this.smoothness = parseInt(e.target.value) / 100;
+                this.smoothness = parseInt(e.target.value) / 100; // 0 to 0.9
                 smoothnessVal.textContent = `${e.target.value}%`;
+                this.updateCursorSize(); // Softness might affect visual cursor style?
             });
         }
     }
@@ -75,6 +76,12 @@ export class BrushTool {
             const displaySize = this.size * zoom;
             this.cursor.style.width = `${displaySize}px`;
             this.cursor.style.height = `${displaySize}px`;
+
+            // Visual feedback for softness
+            const blur = (this.smoothness * this.size * zoom) / 2;
+            this.cursor.style.boxShadow = `0 0 ${blur}px rgba(255,255,255,0.8), inset 0 0 ${blur}px rgba(0,0,0,0.5)`;
+            // Or just simple border blur?
+            // this.cursor.style.filter = `blur(${this.smoothness * 5}px)`; // This blurs the whole cursor which is confusing
         }
     }
 
@@ -102,6 +109,15 @@ export class BrushTool {
         layer.ctx.lineWidth = this.size / layer.scale;
         layer.ctx.globalAlpha = this.opacity;
         layer.ctx.globalCompositeOperation = 'source-over';
+
+        // Softness (Shadow Blur)
+        if (this.smoothness > 0) {
+            layer.ctx.shadowBlur = (this.smoothness * this.size) / layer.scale;
+            layer.ctx.shadowColor = this.color;
+        } else {
+            layer.ctx.shadowBlur = 0;
+            layer.ctx.shadowColor = 'transparent';
+        }
     }
 
     mousemove(coords, event) {
@@ -117,22 +133,7 @@ export class BrushTool {
         const layer = this.layerManager.getActiveLayer();
         if (!layer) return;
 
-        let tCoords = this.getTransformedCoords(coords, layer);
-
-        // Smoothing Logic
-        if (this.smoothness > 0) {
-            // Simple Low Pass Filter
-            // current = last + (target - last) * (1 - smoothness)
-            // But we want to draw from last to current.
-            // Actually, we update lastX/Y slowly towards tCoords.
-
-            // Wait, if we do that, we lag behind the cursor. That's how smoothing works.
-            const factor = 1 - this.smoothness;
-            const nextX = this.lastX + (tCoords.x - this.lastX) * factor;
-            const nextY = this.lastY + (tCoords.y - this.lastY) * factor;
-
-            tCoords = { x: nextX, y: nextY };
-        }
+        const tCoords = this.getTransformedCoords(coords, layer);
 
         layer.ctx.lineTo(tCoords.x, tCoords.y);
         layer.ctx.stroke();
@@ -147,7 +148,11 @@ export class BrushTool {
         if (this.isDrawing) {
             this.isDrawing = false;
             const layer = this.layerManager.getActiveLayer();
-            if (layer) layer.ctx.closePath();
+            if (layer) {
+                layer.ctx.closePath();
+                layer.ctx.shadowBlur = 0; // Reset
+                layer.ctx.shadowColor = 'transparent';
+            }
         }
     }
 
