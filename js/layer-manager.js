@@ -114,6 +114,32 @@ export class LayerManager {
         return this.layers[this.activeLayerIndex];
     }
 
+    deleteSelection(selectionManager) {
+        const layer = this.getActiveLayer();
+        if (!layer || !layer.visible || !selectionManager || !selectionManager.hasSelection()) return;
+
+        layer.ctx.save();
+
+        // Transform context to align with Canvas Space selection
+        layer.ctx.scale(1 / layer.scale, 1 / layer.scale);
+        layer.ctx.translate(-layer.x, -layer.y);
+
+        // Apply clip
+        selectionManager.clip(layer.ctx);
+
+        // Reset transform to fill in Canvas Space (which is now aligned)
+        // Actually, since we transformed the context, if we draw in Canvas Space coordinates, it will map to Layer Space correctly.
+        // We want to clear everything inside the clip.
+        // We can just clear a huge rectangle covering the whole canvas area.
+        layer.ctx.globalCompositeOperation = 'destination-out';
+        layer.ctx.fillStyle = 'black'; // Color doesn't matter for destination-out
+        layer.ctx.fillRect(0, 0, this.canvasManager.width, this.canvasManager.height);
+
+        layer.ctx.restore();
+
+        this.canvasManager.render(this.layers);
+    }
+
     updateUI() {
         this.layersListElement.innerHTML = '';
 

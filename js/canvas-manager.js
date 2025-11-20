@@ -106,17 +106,42 @@ export class CanvasManager {
     }
 
     render(layers) {
-        this.clear();
-        for (let i = layers.length - 1; i >= 0; i--) {
-            const layer = layers[i];
-            if (layer.visible) {
-                this.ctx.save();
-                this.ctx.translate(layer.x, layer.y);
-                this.ctx.scale(layer.scale, layer.scale);
-                this.ctx.drawImage(layer.canvas, 0, 0);
-                this.ctx.restore();
-            }
+        // Clear main canvas
+        this.ctx.clearRect(0, 0, this.width, this.height);
+
+        // Draw background pattern
+        // (Handled by CSS, but if we export, we might need it. For now, transparent)
+
+        this.ctx.save();
+        // Apply zoom and pan
+        this.ctx.translate(this.offsetX, this.offsetY);
+        this.ctx.scale(this.scale, this.scale);
+
+        // Render layers
+        if (layers) {
+            layers.forEach(layer => {
+                if (layer.visible) {
+                    this.ctx.save();
+                    // Apply layer transformations
+                    this.ctx.translate(layer.x, layer.y);
+                    this.ctx.scale(layer.scale, layer.scale);
+
+                    this.ctx.drawImage(layer.canvas, 0, 0);
+                    this.ctx.restore();
+                }
+            });
         }
+
+        // Render Selection Overlay
+        if (this.selectionManager) {
+            this.selectionManager.render(this.ctx);
+        }
+
+        this.ctx.restore();
+    }
+
+    setSelectionManager(selectionManager) {
+        this.selectionManager = selectionManager;
     }
 
     getRelativeCoordinates(event) {

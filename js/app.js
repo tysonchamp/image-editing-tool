@@ -34,6 +34,15 @@ class App {
 
         // Setup New Project Modal
         this.setupModal();
+
+        // Keyboard Shortcuts
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                if (this.toolManager.selectionManager.hasSelection()) {
+                    this.layerManager.deleteSelection(this.toolManager.selectionManager);
+                }
+            }
+        });
     }
 
     setupModal() {

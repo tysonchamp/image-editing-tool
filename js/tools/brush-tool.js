@@ -1,7 +1,8 @@
 export class BrushTool {
-    constructor(canvasManager, layerManager) {
+    constructor(canvasManager, layerManager, selectionManager) {
         this.canvasManager = canvasManager;
         this.layerManager = layerManager;
+        this.selectionManager = selectionManager;
         this.isDrawing = false;
         this.lastX = 0;
         this.lastY = 0;
@@ -104,6 +105,64 @@ export class BrushTool {
         this.lastX = tCoords.x;
         this.lastY = tCoords.y;
 
+        layer.ctx.save(); // Save state before clipping
+
+        // Apply Selection Clip
+        if (this.selectionManager && this.selectionManager.hasSelection()) {
+            // The selection path is in Canvas Space.
+            // The layer context is in Layer Space (0,0 is layer top-left).
+            // We need to transform the selection path to Layer Space?
+            // Or transform the context to Canvas Space, clip, then transform back?
+
+            // Transforming path is hard.
+            // Transforming context is easier.
+
+            // Actually, we are drawing on the layer context.
+            // layer.ctx has no transform applied by default (it's 1:1 with layer pixels).
+            // But the selection is defined in Canvas coordinates.
+            // Layer is at layer.x, layer.y with layer.scale.
+
+            // To clip correctly:
+            // 1. Translate/Scale context to match Canvas Space relative to Layer.
+            //    Canvas(0,0) is at Layer(-layer.x/scale, -layer.y/scale) ?
+
+            // Let's do inverse transform:
+            // ctx.scale(1/layer.scale, 1/layer.scale);
+            // ctx.translate(-layer.x, -layer.y);
+            // ctx.clip(selectionPath);
+            // ctx.translate(layer.x, layer.y);
+            // ctx.scale(layer.scale, layer.scale);
+
+            // Wait, if we change transform, our drawing coordinates (tCoords) which are already transformed
+            // will be wrong if we don't reset transform.
+
+            // So:
+            layer.ctx.beginPath();
+            // We need to transform the context to align with the selection path
+            layer.ctx.save();
+            layer.ctx.scale(1 / layer.scale, 1 / layer.scale);
+            layer.ctx.translate(-layer.x, -layer.y);
+            this.selectionManager.clip(layer.ctx);
+            layer.ctx.restore();
+            // Now we are back to Layer Space, but with clip applied?
+            // No, restore() removes the clip if it was part of the state saved.
+            // Clipping is part of the state.
+
+            // So we cannot use save/restore to wrap the clip application if we want the clip to persist for drawing.
+            // But we need to restore the transform.
+
+            // Correct way:
+            // 1. Apply transform.
+            // 2. Create clip.
+            // 3. Restore transform (inverse operation).
+
+            layer.ctx.scale(1 / layer.scale, 1 / layer.scale);
+            layer.ctx.translate(-layer.x, -layer.y);
+            this.selectionManager.clip(layer.ctx);
+            layer.ctx.translate(layer.x, layer.y);
+            layer.ctx.scale(layer.scale, layer.scale);
+        }
+
         layer.ctx.beginPath();
         layer.ctx.moveTo(this.lastX, this.lastY);
         layer.ctx.lineCap = 'round';
@@ -155,6 +214,7 @@ export class BrushTool {
                 layer.ctx.closePath();
                 layer.ctx.shadowBlur = 0; // Reset
                 layer.ctx.shadowColor = 'transparent';
+                layer.ctx.restore(); // Restore from save() in mousedown
             }
         }
     }

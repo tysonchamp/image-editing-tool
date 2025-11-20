@@ -1,7 +1,8 @@
 export class EraserTool {
-    constructor(canvasManager, layerManager) {
+    constructor(canvasManager, layerManager, selectionManager) {
         this.canvasManager = canvasManager;
         this.layerManager = layerManager;
+        this.selectionManager = selectionManager;
         this.isErasing = false;
         this.lastX = 0;
         this.lastY = 0;
@@ -69,6 +70,16 @@ export class EraserTool {
         this.lastX = tCoords.x;
         this.lastY = tCoords.y;
 
+        layer.ctx.save(); // Save state
+
+        if (this.selectionManager && this.selectionManager.hasSelection()) {
+            layer.ctx.scale(1 / layer.scale, 1 / layer.scale);
+            layer.ctx.translate(-layer.x, -layer.y);
+            this.selectionManager.clip(layer.ctx);
+            layer.ctx.translate(layer.x, layer.y);
+            layer.ctx.scale(layer.scale, layer.scale);
+        }
+
         layer.ctx.beginPath();
         layer.ctx.moveTo(this.lastX, this.lastY);
         layer.ctx.lineCap = 'round';
@@ -130,6 +141,7 @@ export class EraserTool {
                 layer.ctx.globalCompositeOperation = 'source-over';
                 layer.ctx.shadowBlur = 0;
                 layer.ctx.shadowColor = 'transparent';
+                layer.ctx.restore();
             }
         }
     }
