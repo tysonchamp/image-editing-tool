@@ -1,12 +1,17 @@
 import { CanvasManager } from './canvas-manager.js';
 import { LayerManager } from './layer-manager.js';
 import { ToolManager } from './tool-manager.js';
+import { ImageLibrary } from './image-library.js';
 
 class App {
     constructor() {
         this.canvasManager = new CanvasManager();
         this.layerManager = new LayerManager(this.canvasManager);
         this.toolManager = new ToolManager(this.canvasManager, this.layerManager);
+
+        this.imageLibrary = new ImageLibrary((img) => {
+            this.layerManager.addLayer('Stock Image', img);
+        });
 
         this.init();
     }
@@ -31,6 +36,9 @@ class App {
         const fileInput = document.getElementById('file-input');
         document.getElementById('import-btn').addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', (e) => this.handleImageImport(e));
+
+        // Setup Library Button
+        document.getElementById('library-btn').addEventListener('click', () => this.imageLibrary.open());
 
         // Setup New Project Modal
         this.setupModal();

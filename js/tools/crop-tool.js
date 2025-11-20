@@ -79,10 +79,49 @@ export class CropTool {
     crop(x, y, width, height) {
         // Crop all layers
         this.layerManager.layers.forEach(layer => {
-            const data = layer.ctx.getImageData(x, y, width, height);
-            layer.canvas.width = width;
-            layer.canvas.height = height;
-            layer.ctx.putImageData(data, 0, 0);
+            // Transform crop rect to layer coordinates
+            const layerX = (x - layer.x) / layer.scale;
+            const layerY = (y - layer.y) / layer.scale;
+            const layerWidth = width / layer.scale;
+            const layerHeight = height / layer.scale;
+
+            // Get image data from the layer
+            // Note: getImageData requires integer coordinates, but we might have floats.
+            // We might need to draw to a temp canvas to crop accurately with scaling.
+
+            // Simpler approach: Create a new canvas of the crop size, draw the layer onto it with correct transform.
+            const newCanvas = document.createElement('canvas');
+            newCanvas.width = width;
+            newCanvas.height = height;
+            const newCtx = newCanvas.getContext('2d');
+
+            // Draw the layer such that the cropped area fills the new canvas
+            // We want the point (x,y) in Canvas Space to be at (0,0) in New Canvas.
+            // Layer is currently drawn at (layer.x, layer.y) with scale (layer.scale) in Canvas Space.
+            // So in New Canvas, we translate by (-x, -y) relative to the Canvas Space representation of the layer.
+
+            newCtx.save();
+            newCtx.translate(-x, -y); // Move crop origin to 0,0
+            newCtx.translate(layer.x, layer.y); // Move layer to its position
+            newCtx.scale(layer.scale, layer.scale); // Apply layer scale
+            newCtx.drawImage(layer.canvas, 0, 0);
+            newCtx.restore();
+
+            // Update layer
+            layer.canvas = newCanvas;
+            layer.ctx = newCtx;
+            layer.x = 0; // Reset position relative to new canvas size? 
+            // Wait, if we crop the whole canvas, the new canvas represents the new viewport.
+            // So the layer's new position relative to the new viewport (0,0) is what we just drew.
+            // So layer.x and layer.y should be reset to 0 because we baked the position into the new canvas?
+            // Yes, effectively we "flattened" the view of this layer into the new crop rect.
+            // But this loses the ability to move the full layer content if it was outside the crop?
+            // Usually "Crop" implies discarding everything outside.
+
+            layer.x = 0;
+            layer.y = 0;
+            layer.scale = 1; // We baked the scale too?
+            // Yes, if we drew it scaled onto the new canvas, the new canvas pixels are 1:1 with the main canvas pixels.
         });
 
         // Resize main canvas

@@ -121,8 +121,20 @@ export class CanvasManager {
 
     getRelativeCoordinates(event) {
         const rect = this.canvas.getBoundingClientRect();
-        const x = (event.clientX - rect.left) * (this.width / rect.width);
-        const y = (event.clientY - rect.top) * (this.height / rect.height);
+
+        // Calculate mouse position relative to the canvas element
+        const mouseX = event.clientX - rect.left;
+        const mouseY = event.clientY - rect.top;
+
+        // Adjust for canvas resolution scaling (if CSS size != attribute size)
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+
+        // Apply Zoom and Pan transformations to get "Canvas Space" coordinates
+        // Canvas Space = (Screen Space - Offset) / Scale
+        const x = (mouseX * scaleX - this.offsetX) / this.scale;
+        const y = (mouseY * scaleY - this.offsetY) / this.scale;
+
         return { x, y };
     }
 }
