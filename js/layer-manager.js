@@ -35,17 +35,22 @@ export class LayerManager {
 
     addLayer(name = null, image = null) {
         const layerCanvas = document.createElement('canvas');
-        layerCanvas.width = this.canvasManager.width;
-        layerCanvas.height = this.canvasManager.height;
         const ctx = layerCanvas.getContext('2d');
 
         let x = 0;
         let y = 0;
 
         if (image) {
+            layerCanvas.width = image.width;
+            layerCanvas.height = image.height;
+            ctx.drawImage(image, 0, 0);
+
+            // Center the image on the main canvas
             x = (this.canvasManager.width - image.width) / 2;
             y = (this.canvasManager.height - image.height) / 2;
-            ctx.drawImage(image, 0, 0);
+        } else {
+            layerCanvas.width = this.canvasManager.width;
+            layerCanvas.height = this.canvasManager.height;
         }
 
         const layer = {
@@ -54,8 +59,8 @@ export class LayerManager {
             canvas: layerCanvas,
             ctx: ctx,
             visible: true,
-            x: 0,
-            y: 0,
+            x: x,
+            y: y,
             scale: 1.0
         };
 
