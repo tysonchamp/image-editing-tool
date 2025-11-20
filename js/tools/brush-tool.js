@@ -38,6 +38,7 @@ export class BrushTool {
         if (colorInput) {
             colorInput.addEventListener('input', (e) => {
                 this.color = e.target.value;
+                this.updateCursorSize();
             });
         }
 
@@ -77,11 +78,13 @@ export class BrushTool {
             this.cursor.style.width = `${displaySize}px`;
             this.cursor.style.height = `${displaySize}px`;
 
-            // Visual feedback for softness
+            // Set border color to selected color
+            this.cursor.style.borderColor = this.color;
+
+            // Visual feedback for softness + Contrast shadow
             const blur = (this.smoothness * this.size * zoom) / 2;
-            this.cursor.style.boxShadow = `0 0 ${blur}px rgba(255,255,255,0.8), inset 0 0 ${blur}px rgba(0,0,0,0.5)`;
-            // Or just simple border blur?
-            // this.cursor.style.filter = `blur(${this.smoothness * 5}px)`; // This blurs the whole cursor which is confusing
+            // Add a black shadow for contrast so it's visible on light backgrounds even if color is light
+            this.cursor.style.boxShadow = `0 0 2px rgba(0,0,0,0.8), inset 0 0 ${blur}px ${this.color}`;
         }
     }
 

@@ -45,8 +45,11 @@ export class EraserTool {
             this.cursor.style.width = `${displaySize}px`;
             this.cursor.style.height = `${displaySize}px`;
 
+            this.cursor.style.borderColor = 'white'; // Eraser is always white border
+
             const blur = (this.smoothness * this.size * zoom) / 2;
-            this.cursor.style.boxShadow = `0 0 ${blur}px rgba(255,255,255,0.8), inset 0 0 ${blur}px rgba(0,0,0,0.5)`;
+            // Add black shadow for contrast on white backgrounds
+            this.cursor.style.boxShadow = `0 0 2px rgba(0,0,0,0.8), inset 0 0 ${blur}px rgba(0,0,0,0.5)`;
         }
     }
 
